@@ -2,61 +2,151 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IFS Weather Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: white; text-align: center; padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 { margin-bottom: 5px; color: #e94560; }
-        h2 { background: #16213e; padding: 10px; border-radius: 5px; text-align: left; margin-top: 40px; }
-        .row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
-        .card { background: #0f3460; padding: 5px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        img { width: 100%; height: auto; border-radius: 5px; display: block; }
-        .hero { background: white; padding: 15px; border-radius: 12px; margin-bottom: 30px; }
-        .hero img { max-width: 100%; border-radius: 8px; }
-        .footer { margin-top: 50px; font-size: 0.8em; color: #533483; }
+        /* THEME & COLORS */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #1a1a2e; /* Deep dark blue */
+            color: #ffffff; 
+            text-align: center; 
+            margin: 0; 
+            padding: 20px; 
+        }
+
+        .container { 
+            max-width: 1300px; 
+            margin: 0 auto; 
+        }
+
+        h1 { 
+            color: #e94560; /* Coral/Red accent */
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #95a5a6;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        /* HERO SECTION (THE ANIMATION) */
+        .hero { 
+            background: #16213e; 
+            padding: 20px; 
+            border-radius: 15px; 
+            margin-bottom: 40px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .hero h2 { 
+            margin-top: 0; 
+            color: #0f3460; 
+            background: #e94560; 
+            display: inline-block; 
+            padding: 5px 20px; 
+            border-radius: 20px; 
+            font-size: 1.2em;
+        }
+        .hero img { 
+            width: 100%; 
+            max-width: 900px; 
+            border-radius: 10px; 
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* GRID SYSTEM FOR PLOTS */
+        h2 { 
+            text-align: left; 
+            border-left: 5px solid #e94560; 
+            padding-left: 15px; 
+            margin-top: 40px;
+            font-size: 1.5em;
+        }
+
+        .row { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for 4 time steps */
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+
+        /* Responsive: On small screens (phones), stack them in 1 column */
+        @media (max-width: 800px) {
+            .row { grid-template-columns: 1fr; }
+        }
+
+        .card { 
+            background: #16213e; 
+            padding: 10px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.02); /* Slight zoom effect on hover */
+        }
+        .card img { 
+            width: 100%; 
+            height: auto; 
+            border-radius: 5px; 
+            display: block;
+        }
+
+        .footer { 
+            margin-top: 60px; 
+            padding: 20px;
+            font-size: 0.85em; 
+            color: #533483; 
+            border-top: 1px solid #16213e;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>IFS Regional Forecast</h1>
-        <p>Japan Region | Automated Daily Update</p>
+        <p class="subtitle">Japan Region | Automated Daily Update via ECMWF IFS</p>
 
-        <!-- ANIMATION SECTION -->
+        <!-- 1. THE ANIMATION (HERO) -->
         <div class="hero">
-            <h2 style="background:transparent; border:none; text-align:center;">✨ Temperature Evolution (GIF)</h2>
+            <h2>✨ Temperature Evolution (GIF)</h2>
+            <!-- The '?v=' part forces the browser to refresh the image every time -->
             <img src="weather_animation.gif?v=1" alt="Weather Animation Loading...">
         </div>
 
-        <!-- TEMPERATURE ROW -->
+        <!-- 2. TEMPERATURE ROW -->
         <h2>🌡️ Temperature (°C)</h2>
         <div class="row">
-            <div class="card"><img src="plot_2t_6.png?v=1"></div>
-            <div class="card"><img src="plot_2t_12.png?v=1"></div>
-            <div class="card"><img src="plot_2t_120.png?v=1"></div>
-            <div class="card"><img src="plot_2t_240.png?v=1"></div>
+            <div class="card"><img src="plot_2t_6.png?v=1" alt="6h"></div>
+            <div class="card"><img src="plot_2t_12.png?v=1" alt="12h"></div>
+            <div class="card"><img src="plot_2t_120.png?v=1" alt="5d"></div>
+            <div class="card"><img src="plot_2t_240.png?v=1" alt="10d"></div>
         </div>
 
-        <!-- PRESSURE ROW -->
+        <!-- 3. PRESSURE ROW -->
         <h2>⏲️ Surface Pressure (hPa)</h2>
         <div class="row">
-            <div class="card"><img src="plot_sp_6.png?v=1"></div>
-            <div class="card"><img src="plot_sp_12.png?v=1"></div>
-            <div class="card"><img src="plot_sp_120.png?v=1"></div>
-            <div class="card"><img src="plot_sp_240.png?v=1"></div>
+            <div class="card"><img src="plot_sp_6.png?v=1" alt="6h"></div>
+            <div class="card"><img src="plot_sp_12.png?v=1" alt="12h"></div>
+            <div class="card"><img src="plot_sp_120.png?v=1" alt="5d"></div>
+            <div class="card"><img src="plot_sp_240.png?v=1" alt="10d"></div>
         </div>
 
-        <!-- PRECIPITATION ROW -->
+        <!-- 4. PRECIPITATION ROW -->
         <h2>🌧️ Total Precipitation (mm)</h2>
         <div class="row">
-            <div class="card"><img src="plot_tp_6.png?v=1"></div>
-            <div class="card"><img src="plot_tp_12.png?v=1"></div>
-            <div class="card"><img src="plot_tp_120.png?v=1"></div>
-            <div class="card"><img src="plot_tp_240.png?v=1"></div>
+            <div class="card"><img src="plot_tp_6.png?v=1" alt="6h"></div>
+            <div class="card"><img src="plot_tp_12.png?v=1" alt="12h"></div>
+            <div class="card"><img src="plot_tp_120.png?v=1" alt="5d"></div>
+            <div class="card"><img src="plot_tp_240.png?v=1" alt="10d"></div>
         </div>
 
         <div class="footer">
-            Data Source: ECMWF IFS | Automated Pipeline
+            Data Source: ECMWF IFS | Automated Generation Pipeline<br>
+            Managed via GitHub Actions
         </div>
     </div>
 
