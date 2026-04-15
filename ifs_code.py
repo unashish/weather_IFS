@@ -12,9 +12,7 @@ import time
 warnings.filterwarnings("ignore")
 client = Client(source="azure")
 
-# 1. Create a unique timestamp for this specific run
-timestamp = time.strftime("%Y%m%d_%H%M")
-
+# SETTINGS
 steps = [6, 12, 120, 240]
 lat_max, lat_min = 46.0, 30.0
 lon_min, lon_max = 128.0, 146.0
@@ -25,18 +23,21 @@ variables = {
     "tp": ["Total Precipitation", "YlGnBu", "mm", "tp"]
 }
 
+# This timestamp is ONLY for the temporary GRIB files
+run_timestamp = time.strftime("%Y%m%d_%H%M")
 temp_frames = []
 
-print(f"Starting Batch Processing for run: {timestamp}")
+print(f"Starting Batch Processing (Run ID: {run_timestamp})")
 
 for var_code, info in variables.items():
     var_name, var_cmap, var_unit, data_key = info
     print(f"\n>>> Variable: {var_name}")
     
     for step in steps:
-        # We add the timestamp to the filename so Git sees a change every time
-        target_grib = f"temp_{var_code}_{step}_{timestamp}.grib"
-        plot_img = f"plot_{var_code}_{step}_{timestamp}.png"
+        # GRIB uses timestamp so Git sees a "new" file
+        target_grib = f"temp_{var_code}_{step}_{run_timestamp}.grib"
+        # PNG uses NO timestamp so index.html can find it
+        plot_img = f"plot_{var_code}_{step}.png"
         
         print(f"    Step {step}h: ", end="", flush=True)
         
@@ -74,16 +75,26 @@ for var_code, info in variables.items():
                 
             print("Done.")
             ds.close()
-            os.remove(target_grib)
-            time.sleep(2)
 
         except Exception as e:
             print(f"FAILED: {e}")
         finally:
+            # --- THE CLEANUP ENGINE ---
+            # 1. Delete the GRIB file
             if os.path.exists(target_grib):
-                try: os.remove(target_grib)
-                except: pass
+                os.remove(target_grib)
+            # 2. Delete the hidden .idx file (This solves your clutter problem!)
+            if os.path.exists(target_grib + ".idx"):
+                os.remove(target_grib + ".idx")
+            # 3. Also delete any leftover idx files from previous failed runs
+            for f in os.listdir('.'):
+                if f.endswith('.idx'):
+                    try: os.remove(f)
+                    except: pass
+            
+        time.sleep(2)
 
+# CREATE THE GIF
 if len(temp_frames) > 0:
     print("\n>>> Stitching Animation...")
     imageio.mimsave('weather_animation.gif', temp_frames, fps=0.7)
