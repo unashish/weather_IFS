@@ -1,0 +1,82 @@
+name: IFS Forecast Dashboard
+
+on:
+  # ── Scheduled run: every day at 06:30 UTC (after ECMWF 00Z run is available)
+  schedule:
+    - cron: "30 6 * * *"
+
+  # ── Also allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to commit / push output files back to the repo
+
+jobs:
+  run-forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout repo ──────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python ─────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # ── 3. Cache pip dependencies ────────────────────────────────────────
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      # ── 4. Install system libraries needed by cartopy / eccodes ─────────
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libeccodes-dev libgeos-dev libproj-dev proj-data \
+            libspatialindex-dev
+
+      # ── 5. Install Python packages ────────────────────────────────────────
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install \
+            ecmwf-opendata \
+            xarray \
+            cfgrib \
+            eccodes \
+            matplotlib \
+            cartopy \
+            imageio \
+            Pillow \
+            pandas \
+            numpy
+
+      # ── 6. Run the forecast script ────────────────────────────────────────
+      - name: Generate forecast plots & GIF
+        run: python live.py
+
+      # ── 7. Commit outputs back to the repo ───────────────────────────────
+      #       (plots + GIF land in the repo root alongside index.html)
+      - name: Commit and push outputs
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            plot_combined_*.png \
+            temp_pressure_evolution.gif
+
+          # Only commit if there are actual changes
+          git diff --cached --quiet || \
+            git commit -m "chore: update forecast $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+          git push
