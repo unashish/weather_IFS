@@ -1,168 +1,107 @@
 import os
 import xarray as xr
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from ecmwf.opendata import Client
+import numpy as np
+import imageio
 import warnings
 import time
-import pandas as pd
-from PIL import Image
 
+# Suppress warnings
 warnings.filterwarnings("ignore")
 
 client = Client(source="azure")
 
-steps = [3, 6, 12, 48, 120]
-
+# SETTINGS
+steps = [6, 12, 120, 240] # 6h, 12h, 5d, 10d
 lat_max, lat_min = 46.0, 30.0
 lon_min, lon_max = 128.0, 146.0
 
-# ── Output size ──────────────────────────────────────────────────────────────
-PLOT_DPI    = 100          # was 150  → smaller PNG / faster GIF frame load
-FIG_SIZE    = (7, 4.5)     # was (8,5) → tighter frame
-GIF_RESIZE  = (700, 450)   # final pixel size forced for every GIF frame
-GIF_DURATION= 1200         # ms per frame (slightly slower = easier to read)
+# Variable Dictionary: {Code: [Display Name, Colormap, Unit, Dataset Key]}
+variables = {
+    "2t": ["Temperature", "coolwarm", "°C", "t2m"],
+    "sp": ["Surface Pressure", "viridis", "hPa", "sp"],
+    "tp": ["Total Precipitation", "YlGnBu", "mm", "tp"]
+}
 
-# ── Contour tuning ───────────────────────────────────────────────────────────
-CONTOUR_LEVELS   = 8       # was 15  → far less clutter
-CONTOUR_INTERVAL = None    # set e.g. 4 to force fixed hPa spacing (None = auto)
+temp_frames = []
 
-print("Starting combined Temperature + Pressure processing...")
+print("Starting Optimized Batch Processing...")
 
-frame_paths = []
+for var_code, info in variables.items():
+    var_name, var_cmap, var_unit, data_key = info
+    print(f"\n>>> Variable: {var_name}")
+    
+    for step in steps:
+        target_grib = f"temp_{var_code}_{step}.grib"
+        plot_img = f"plot_{var_code}_{step}.png"
+        
+        print(f"    Step {step}h: ", end="", flush=True)
+        
+        try:
+            # 1. DOWNLOAD
+            client.retrieve(model="ifs", type="fc", param=var_code, step=step, target=target_grib)
+            
+            # 2. LOAD
+            ds = xr.open_dataset(target_grib, engine="cfgrib")
+            
+            if data_key not in ds.data_vars:
+                raise KeyError(f"Missing {data_key}")
 
-for step in steps:
-    t_file   = f"temp_2t_{step}.grib"
-    p_file   = f"temp_sp_{step}.grib"
-    plot_img = f"plot_combined_{step}.png"
+            data = ds[data_key].sel(latitude=slice(lat_max, lat_min), longitude=slice(lon_min, lon_max))
 
-    print(f"Step {step}h: ", end="", flush=True)
+            # Handle 3D/Level dimensions
+            if len(data.dims) > 2:
+                level_dim = [d for d in data.dims if d not in ['latitude', 'longitude', 'time']][0]
+                data = data.isel({level_dim: 0})
 
-    ds_t = ds_p = None
+            # 3. CONVERSIONS
+            if var_code == "2t":
+                data = data - 273.15
+            elif var_code == "sp":
+                data = data / 100.0
+            elif var_code == "tp":
+                data = data * 1000.0
 
-    try:
-        # ── Download ─────────────────────────────────────────────────────────
-        client.retrieve(model="ifs", type="fc", param="2t",
-                        step=step, date=-1, time=0, target=t_file)
-        client.retrieve(model="ifs", type="fc", param="sp",
-                        step=step, date=-1, time=0, target=p_file)
+            # 4. PLOTTING
+            fig = plt.figure(figsize=(10, 6))
+            ax = plt.axes(projection=ccrs.PlateCarree())
+            ax.add_feature(cfeature.COASTLINE, linewidth=1.0)
+            ax.add_feature(cfeature.BORDERS, linestyle=':')
+            
+            data.plot(ax=ax, transform=ccrs.PlateCarree(), cmap=var_cmap, cbar_kwargs={'label': var_unit})
+            
+            # Date Timestamp
+            time_str = np.datetime_as_string(ds.time.values[0] + np.timedelta64(step, 'h'), unit='h').replace('T', ' ')
+            plt.title(f"IFS {var_name}\n{time_str}", fontsize=12, fontweight='bold')
+            
+            plt.savefig(plot_img, dpi=150, bbox_inches='tight')
+            plt.close()
+            
+            # Capture frames for the Temperature GIF
+            if var_code == "2t":
+                temp_frames.append(plt.imread(plot_img))
+                
+            print("Done.")
+            ds.close()
+            os.remove(target_grib)
+            time.sleep(2)
 
-        ds_t = xr.open_dataset(t_file, engine="cfgrib")
-        ds_p = xr.open_dataset(p_file, engine="cfgrib")
+        except Exception as e:
+            print(f"FAILED: {e}")
+        finally:
+            if os.path.exists(target_grib):
+                try: os.remove(target_grib)
+                except: pass
 
-        t = ds_t["t2m"].sel(
-            latitude=slice(lat_max, lat_min),
-            longitude=slice(lon_min, lon_max)
-        ) - 273.15
-
-        p = ds_p["sp"].sel(
-            latitude=slice(lat_max, lat_min),
-            longitude=slice(lon_min, lon_max)
-        ) / 100.0
-
-        # ── Contour levels: fixed interval keeps labels readable ──────────────
-        if CONTOUR_INTERVAL:
-            p_min = float(p.min())
-            p_max = float(p.max())
-            import numpy as np
-            levels = np.arange(
-                round(p_min / CONTOUR_INTERVAL) * CONTOUR_INTERVAL,
-                round(p_max / CONTOUR_INTERVAL) * CONTOUR_INTERVAL + CONTOUR_INTERVAL,
-                CONTOUR_INTERVAL
-            )
-        else:
-            levels = CONTOUR_LEVELS
-
-        # ── Time labels ───────────────────────────────────────────────────────
-        base_time      = pd.to_datetime(ds_t.time.values)
-        valid_time     = base_time + pd.Timedelta(hours=int(step))
-        valid_time_str = valid_time.strftime("%Y-%m-%d %H:%M UTC")
-
-        # ── Plot ──────────────────────────────────────────────────────────────
-        fig = plt.figure(figsize=FIG_SIZE)
-        ax  = plt.axes(projection=ccrs.PlateCarree())
-
-        ax.set_extent([lon_min, lon_max, lat_min, lat_max], crs=ccrs.PlateCarree())
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.8)
-        ax.add_feature(cfeature.BORDERS,   linestyle=":", linewidth=0.5)
-        ax.add_feature(cfeature.LAND,      facecolor="lightgray", alpha=0.3)
-
-        # Temperature shading
-        t.plot(
-            ax=ax,
-            cmap="RdYlBu_r",
-            transform=ccrs.PlateCarree(),
-            cbar_kwargs={"label": "°C", "shrink": 0.85, "pad": 0.03}
-        )
-
-        # Pressure contours — fewer, thicker, well-labelled
-        cs = p.plot.contour(
-            ax=ax,
-            colors="black",
-            linewidths=1.2,
-            levels=levels,
-            alpha=0.7
-        )
-        ax.clabel(cs, inline=True, fontsize=7, fmt="%d hPa",
-                  inline_spacing=4)
-
-        # Gridlines (subtle)
-        gl = ax.gridlines(draw_labels=True, linewidth=0.4,
-                          color="gray", alpha=0.5, linestyle="--")
-        gl.top_labels   = False
-        gl.right_labels = False
-        gl.xlocator = mticker.MultipleLocator(4)
-        gl.ylocator = mticker.MultipleLocator(4)
-        gl.xlabel_style = {"size": 7}
-        gl.ylabel_style = {"size": 7}
-
-        ax.set_title(
-            f"IFS  |  2m Temperature & Surface Pressure  |  +{step}h\n"
-            f"Valid: {valid_time_str}",
-            fontsize=9, pad=6
-        )
-
-        plt.tight_layout(pad=0.5)
-        plt.savefig(plot_img, dpi=PLOT_DPI, bbox_inches="tight")
-        plt.close(fig)
-
-        frame_paths.append(plot_img)
-        print("Done")
-
-    except Exception as e:
-        print(f"FAILED: {e}")
-
-    finally:
-        if ds_t: ds_t.close()
-        if ds_p: ds_p.close()
-        for f in [t_file, p_file]:
-            if os.path.exists(f):
-                os.remove(f)
-
-    time.sleep(2)
-
-# ── Build optimised GIF ───────────────────────────────────────────────────────
-if frame_paths:
-    gif_name = "temp_pressure_evolution.gif"
-    frames   = []
-
-    for path in frame_paths:
-        img = Image.open(path).convert("RGB")
-        img = img.resize(GIF_RESIZE, Image.LANCZOS)
-        # Quantise to 128 colours → much smaller file size
-        img = img.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
-        frames.append(img)
-
-    frames[0].save(
-        gif_name,
-        save_all=True,
-        append_images=frames[1:],
-        duration=GIF_DURATION,
-        loop=0,
-        optimize=True       # Pillow palette optimisation pass
-    )
-    print(f"\nGIF saved: {gif_name}  ({os.path.getsize(gif_name)/1024:.0f} KB)")
+# 5. CREATE THE ANIMATION
+if len(temp_frames) > 0:
+    print("\n>>> Stitching Temperature Animation GIF...")
+    imageio.mimsave('weather_animation.gif', temp_frames, fps=0.7)
+    print("Success! 'weather_animation.gif' created.")
 else:
-    print("No frames produced — GIF skipped.")
+    print("\n[!] No temperature frames captured for GIF.")
+
+print("\nAll tasks complete.")
