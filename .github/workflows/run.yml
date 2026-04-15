@@ -1,1 +1,36 @@
+name: Update Weather Plot
 
+on:
+  schedule:
+    - cron: '0 0,12 * * *'
+  workflow_dispatch: # This allows you to run it manually
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y libeccodes0
+          pip install xarray matplotlib cartopy cfgrib ecmwf-opendata numpy
+          
+      - name: Run Python Script
+        run: python ifs_code.py
+        
+      - name: Commit and Push new plot
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add *.png
+          git commit -m "Automated plot update" || echo "No changes to commit"
+          git push
