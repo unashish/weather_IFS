@@ -1,900 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WEATHER | Japan Regional Weather Forecast</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f5f6f7;
-      --bg-tertiary: #f0f1f3;
-      --text-primary: #111213;
-      --text-secondary: #5a5e66;
-      --text-tertiary: #9096a0;
-      --border-subtle: rgba(0,0,0,0.08);
-      --border-medium: rgba(0,0,0,0.14);
-      --accent-temp: #E24B4A;
-      --accent-precip: #185FA5;
-      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-primary: #1a1b1e;
-        --bg-secondary: #222428;
-        --bg-tertiary: #16171a;
-        --text-primary: #e8e9eb;
-        --text-secondary: #8a8f99;
-        --text-tertiary: #5a5e66;
-        --border-subtle: rgba(255,255,255,0.07);
-        --border-medium: rgba(255,255,255,0.12);
-      }
-    }
-
-    body {
-      font-family: var(--font);
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* ── TOPBAR ── */
-    .topbar {
-      background: var(--bg-primary);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 0 32px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      letter-spacing: 0.2px;
-      text-decoration: none;
-    }
-
-    .brand-icon {
-      width: 30px; height: 30px;
-      background: var(--accent-precip);
-      border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .brand-icon svg { width: 17px; height: 17px; }
-
-    .brand-sub {
-      font-size: 13px;
-      color: var(--text-tertiary);
-      font-weight: 400;
-    }
-
-    .nav-right { display: flex; align-items: center; gap: 16px; }
-
-    .nav-meta { font-size: 12px; color: var(--text-secondary); }
-
-    .live-pill {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.5px;
-      color: #1a7a3c;
-      background: #e8f7ee;
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid #b3dfc4;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .live-pill { background: #0e2e1a; color: #4eca7a; border-color: #1a5232; }
-    }
-
-    .live-dot {
-      width: 6px; height: 6px;
-      background: currentColor;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
-
-    /* ── HERO ── */
-    .hero {
-      background: var(--bg-primary);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 40px 32px 36px;
-    }
-
-    .hero-inner { max-width: 1200px; margin: 0 auto; }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: var(--accent-precip);
-      background: #E6F1FB;
-      padding: 4px 10px;
-      border-radius: 4px;
-      margin-bottom: 18px;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .hero-badge { background: #0c2d4a; }
-    }
-
-    .hero h1 {
-      font-size: 26px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 10px;
-      letter-spacing: -0.4px;
-      line-height: 1.3;
-    }
-
-    .hero p {
-      font-size: 14px;
-      color: var(--text-secondary);
-      max-width: 560px;
-      line-height: 1.65;
-    }
-
-    .hero-meta {
-      margin-top: 28px;
-      display: flex;
-      align-items: center;
-      gap: 0;
-      flex-wrap: wrap;
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      background: var(--bg-secondary);
-      width: fit-content;
-      overflow: hidden;
-    }
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      padding: 10px 20px;
-      border-right: 1px solid var(--border-subtle);
-    }
-
-    .meta-item:last-child { border-right: none; }
-
-    .meta-label {
-      font-size: 10px;
-      color: var(--text-tertiary);
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      font-weight: 500;
-    }
-
-    .meta-value {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    /* ── MAIN ── */
-    .main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 36px 32px;
-    }
-
-    /* ── SECTION ── */
-    .section { margin-bottom: 52px; }
-
-    .section-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .section-title-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .section-bar {
-      width: 3px; height: 18px;
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-
-    .bar-temp { background: var(--accent-temp); }
-    .bar-precip { background: var(--accent-precip); }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-
-    .section-unit {
-      font-size: 11px;
-      color: var(--text-secondary);
-      background: var(--bg-secondary);
-      padding: 2px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border-subtle);
-      font-weight: 500;
-    }
-
-    .section-info {
-      font-size: 12px;
-      color: var(--text-tertiary);
-    }
-
-    /* ── GRID ── */
-    .forecast-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    @media (max-width: 900px) { .forecast-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 520px) { .forecast-grid { grid-template-columns: 1fr; } }
-
-    /* ── CARD ── */
-    .fc-card {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      overflow: hidden;
-      transition: border-color 0.18s, box-shadow 0.18s;
-    }
-
-    .fc-card:hover {
-      border-color: var(--border-medium);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-    }
-
-    .card-header {
-      padding: 10px 14px 9px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .card-step {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-primary);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .card-badge {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 3px;
-      letter-spacing: 0.3px;
-    }
-
-    .badge-near {
-      background: #fff5e0;
-      color: #8a5700;
-      border: 1px solid #f5d78a;
-    }
-
-    .badge-far {
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-      border: 1px solid var(--border-subtle);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .badge-near { background: #2e2000; color: #d4a017; border-color: #5c3e00; }
-    }
-
-    .card-img-wrap {
-      aspect-ratio: 4 / 3;
-      background: var(--bg-secondary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .card-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .card-placeholder {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .placeholder-icon { opacity: 0.18; }
-
-    .placeholder-text {
-      font-size: 11px;
-      color: var(--text-tertiary);
-      font-family: monospace;
-    }
-
-    .card-footer {
-      padding: 8px 14px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      border-top: 1px solid var(--border-subtle);
-    }
-
-    .footer-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .dot-temp { background: var(--accent-temp); }
-    .dot-precip { background: var(--accent-precip); }
-
-    .card-footer-text {
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-
-    /* ── FOOTER ── */
-    .site-footer {
-      background: var(--bg-primary);
-      border-top: 1px solid var(--border-subtle);
-      padding: 22px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .footer-logo {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      padding: 3px 8px;
-      border: 1px solid var(--border-subtle);
-      border-radius: 4px;
-      letter-spacing: 0.5px;
-    }
-
-    .footer-text {
-      font-size: 12px;
-      color: var(--text-secondary);
-    }
-
-    .footer-right {
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-  </style>
-</head>
-<body>
-
-  <!-- TOPBAR -->
-  <nav class="topbar">
-    <a class="brand" href="#">
-      <div class="brand-icon">
-        <svg viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="8.5" cy="7" r="3.5" fill="white" opacity="0.9"/>
-          <path d="M2 13 Q4.5 11 7 12 Q9.5 13 12 11 Q14 9.5 15 11" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        </svg>
-      </div>
-      MeteoSync
-      <span class="brand-sub">/ Japan Regional</span>
-    </a>
-    <div class="nav-right">
-      <span class="nav-meta">ECMWF IFS Open Data</span>
-      <div class="live-pill">
-        <span class="live-dot"></span>
-        Live
-      </div>
-    </div>
-  </nav>
-
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-inner">
-      <div class="hero-badge">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.3"/>
-          <path d="M5 3v2.3l1.4 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
-        High-resolution forecast
-      </div>
-      <h1>Japanese — Weather Forecasting</h1>
-      <p>IFS Forecasts .</p>
-      <div class="hero-meta">
-        <div class="meta-item">
-          <span class="meta-label">Model</span>
-          <span class="meta-value">ECMWF IFS</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Domain</span>
-          <span class="meta-value">Japan</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Run cycle</span>
-          <span class="meta-value">00z / 12z</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Variables</span>
-          <span class="meta-value">T2m · TP</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Pipeline</span>
-          <span class="meta-value">Automated · GitHub</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN CONTENT -->
-  <div class="main">
-
-    <!-- TEMPERATURE SECTION -->
-    <div class="section">
-      <div class="section-head">
-        <div class="section-title-group">
-          <div class="section-bar bar-temp"></div>
-          <span class="section-title">2m Temperature</span>
-          <span class="section-unit">°C</span>
-        </div>
-        <span class="section-info">Derived from T2m &middot; IFS deterministic</span>
-      </div>
-      <div class="forecast-grid">
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+6 h</span>
-            <span class="card-badge badge-near">Short-range</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_2t_6.png?v=1" alt="Temperature +6h forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M4 22 L10 16 L16 20 L22 12 L28 16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_2t_6.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-temp"></span>
-            <span class="card-footer-text">+6 hours from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+12 h</span>
-            <span class="card-badge badge-near">Short-range</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_2t_12.png?v=1" alt="Temperature +12h forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M4 22 L10 16 L16 20 L22 12 L28 16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_2t_12.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-temp"></span>
-            <span class="card-footer-text">+12 hours from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+120 h</span>
-            <span class="card-badge badge-far">Day 5</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_2t_120.png?v=1" alt="Temperature +5 day forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M4 22 L10 16 L16 20 L22 12 L28 16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_2t_120.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-temp"></span>
-            <span class="card-footer-text">+5 days from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+240 h</span>
-            <span class="card-badge badge-far">Day 10</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_2t_240.png?v=1" alt="Temperature +10 day forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect x="4" y="4" width="24" height="24" rx="4" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M4 22 L10 16 L16 20 L22 12 L28 16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_2t_240.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-temp"></span>
-            <span class="card-footer-text">+10 days from init time</span>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- PRECIPITATION SECTION -->
-    <div class="section">
-      <div class="section-head">
-        <div class="section-title-group">
-          <div class="section-bar bar-precip"></div>
-          <span class="section-title">Total Precipitation</span>
-          <span class="section-unit">mm</span>
-        </div>
-        <span class="section-info">Accumulated from T+0 &middot; IFS deterministic</span>
-      </div>
-      <div class="forecast-grid">
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+6 h</span>
-            <span class="card-badge badge-near">Short-range</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_tp_6.png?v=1" alt="Precipitation +6h forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 20 L10 27 M16 20 L16 27 M20 20 L22 27" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_tp_6.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-precip"></span>
-            <span class="card-footer-text">+6 hours from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+12 h</span>
-            <span class="card-badge badge-near">Short-range</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_tp_12.png?v=1" alt="Precipitation +12h forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 20 L10 27 M16 20 L16 27 M20 20 L22 27" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_tp_12.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-precip"></span>
-            <span class="card-footer-text">+12 hours from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+120 h</span>
-            <span class="card-badge badge-far">Day 5</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_tp_120.png?v=1" alt="Precipitation +5 day forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 20 L10 27 M16 20 L16 27 M20 20 L22 27" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_tp_120.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-precip"></span>
-            <span class="card-footer-text">+5 days from init time</span>
-          </div>
-        </div>
-
-        <div class="fc-card">
-          <div class="card-header">
-            <span class="card-step">T+240 h</span>
-            <span class="card-badge badge-far">Day 10</span>
-          </div>
-          <div class="card-img-wrap">
-            <img src="plot_tp_240.png?v=1" alt="Precipitation +10 day forecast"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="card-placeholder">
-              <svg class="placeholder-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <circle cx="16" cy="12" r="6" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 20 L10 27 M16 20 L16 27 M20 20 L22 27" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <span class="placeholder-text">plot_tp_240.png</span>
-            </div>
-          </div>
-          <div class="card-footer">
-            <span class="footer-dot dot-precip"></span>
-            <span class="card-footer-text">+10 days from init time</span>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-
-  <!-- FOOTER -->
-  <footer class="site-footer">
-    <div class="footer-left">
-      <span class="footer-logo">ECMWF</span>
-      <span class="footer-text">Data source: ECMWF IFS Open Data Portal &middot; Managed by Unashish via GitHub</span>
-    </div>
-    <span class="footer-right">MeteoSync Weather Forecasting System &copy; 2026</span>
-  </footer>
-
-</body>
-</html>            border: 1px solid rgba(0, 255, 0, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #00ff88;
-            border-radius: 50%;
-            animation: blink 1.5s infinite;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japan Weather Forecast</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: #f8f9fa; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            text-align: center;
         }
 
-        @keyframes blink { 
-            0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } 
+        .header { 
+            background: #ffffff; 
+            padding: 30px 20px; 
+            border-bottom: 1px solid #ddd; 
+            margin-bottom: 40px;
         }
+
+        h1 { font-size: 24px; margin: 0; color: #111; }
+        p { font-size: 14px; color: #666; margin-top: 5px; }
 
         .container { 
-            max-width: 1400px; 
+            max-width: 1100px; 
             margin: 0 auto; 
-            padding: 40px 20px;
+            padding: 0 20px 60px; 
         }
 
-        .header-section { margin-bottom: 60px; }
-        h1 { font-weight: 800; font-size: 3em; margin: 0; letter-spacing: -1px; }
-        .subtitle { color: var(--text-dim); font-weight: 300; font-size: 1.2em; margin-top: 10px; }
-
-        /* VARIABLE SECTION */
-        .section-container {
-            margin-bottom: 80px;
-            text-align: left;
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .section-header h2 { 
-            margin: 0; 
-            font-size: 1.8em; 
+        .section-title { 
+            text-align: left; 
+            font-size: 18px; 
             font-weight: 600; 
-            letter-spacing: 1px;
+            margin: 30px 0 15px; 
+            padding-left: 10px;
+            border-left: 4px solid #007bff;
         }
 
-        /* LINE DECORATION */
-        .line { height: 2px; flex-grow: 1; background: linear-gradient(to right, var(--glass-border), transparent); }
-
-        /* THE GRID */
-        .row { 
+        .grid { 
             display: grid; 
             grid-template-columns: repeat(4, 1fr); 
-            gap: 20px; 
+            gap: 15px; 
+            margin-bottom: 40px;
         }
 
-        @media (max-width: 1100px) { .row { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 500px) { .grid { grid-template-columns: 1fr; } }
 
-        /* GLASS CARDS */
         .card { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(5px);
-            border: 1px solid var(--glass-border);
-            padding: 15px; 
-            border-radius: 20px; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
+            background: white; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            padding: 10px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .card:hover {
-            transform: translateY(-10px);
-            border-color: rgba(255,255,255,0.3);
-            background: rgba(255,255,255,0.07);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+
+        .card-label { 
+            font-size: 12px; 
+            font-weight: 600; 
+            color: #888; 
+            margin-bottom: 8px; 
+            display: block;
+            text-align: left;
         }
 
         .card img { 
             width: 100%; 
             height: auto; 
-            border-radius: 12px; 
+            border-radius: 4px; 
             display: block;
-            filter: grayscale(20%);
-            transition: 0.3s;
         }
-        .card:hover img { filter: grayscale(0%); }
-
-        .time-label {
-            font-size: 0.7em;
-            text-transform: uppercase;
-            font-weight: 600;
-            color: var(--text-dim);
-            margin-bottom: 10px;
-            display: block;
-            text-align: left;
-            letter-spacing: 1px;
-        }
-
-        /* VARIABLE COLORS */
-        .temp-text { color: var(--accent-temp); }
-        .temp-border { border-left: 4px solid var(--accent-temp); }
-        .press-text { color: var(--accent-press); }
-        .press-border { border-left: 4px solid var(--accent-press); }
-        .precip-text { color: var(--accent-precip); }
-        .precip-border { border-left: 4px solid var(--accent-precip); }
 
         .footer { 
-            margin-top: 100px; 
-            padding: 40px;
-            font-size: 0.8em; 
-            color: var(--text-dim); 
-            text-align: center;
-            border-top: 1px solid var(--glass-border);
+            margin-top: 50px; 
+            font-size: 12px; 
+            color: #aaa; 
+            padding-bottom: 30px;
         }
     </style>
 </head>
 <body>
 
-    <nav>
-        <div class="logo">WEATHER<span>FORECAST</span></div>
-        <div class="status-badge">
-            <div class="status-dot"></div>
-            LIVE SYSTEM ACTIVE
-        </div>
-    </nav>
+    <div class="header">
+        <h1>Japan Regional Weather Forecast</h1>
+        <p>Automated IFS Data Analysis</p>
+    </div>
 
     <div class="container">
-        <div class="header-section">
-            <h1>Regional Intelligence</h1>
-            <p class="subtitle">High-Resolution IFS Forecasts for the Japan</p>
-        </div>
 
         <!-- TEMPERATURE SECTION -->
-        <div class="section-container">
-            <div class="section-header">
-                <h2 class="temp-text">Temperature</h2>
-                <div class="line"></div>
+        <div class="section-title">🌡️ Temperature (°C)</div>
+        <div class="grid">
+            <div class="card">
+                <span class="card-label">6 Hours</span>
+                <img src="plot_2t_6.png?v=1" alt="6h">
             </div>
-            <div class="row">
-                <div class="card temp-border">
-                    <span class="time-label">Forecast +6h</span>
-                    <img src="plot_2t_6.png?v=1" alt="6h">
-                </div>
-                <div class="card temp-border">
-                    <span class="time-label">Forecast +12h</span>
-                    <img src="plot_2t_12.png?v=1" alt="12h">
-                </div>
-                <div class="card temp-border">
-                    <span class="time-label">Forecast +5 Days</span>
-                    <img src="plot_2t_120.png?v=1" alt="5d">
-                </div>
-                <div class="card temp-border">
-                    <span class="time-label">Forecast +10 Days</span>
-                    <img src="plot_2t_240.png?v=1" alt="10d">
-                </div>
+            <div class="card">
+                <span class="card-label">12 Hours</span>
+                <img src="plot_2t_12.png?v=1" alt="12h">
             </div>
-        </div>
-
-        <!-- PRESSURE SECTION -->
-        <div class="section-container">
-            <div class="section-header">
-                <h2 class="press-text">Surface Pressure</h2>
-                <div class="line"></div>
+            <div class="card">
+                <span class="card-label">5 Days</span>
+                <img src="plot_2t_120.png?v=1" alt="5d">
             </div>
-            <div class="row">
-                <div class="card press-border">
-                    <span class="time-label">Forecast +6h</span>
-                    <img src="plot_sp_6.png?v=1" alt="6h">
-                </div>
-                <div class="card press-border">
-                    <span class="time-label">Forecast +12h</span>
-                    <img src="plot_sp_12.png?v=1" alt="12h">
-                </div>
-                <div class="card press-border">
-                    <span class="time-label">Forecast +5 Days</span>
-                    <img src="plot_sp_120.png?v=1" alt="5d">
-                </div>
-                <div class="card press-border">
-                    <span class="time-label">Forecast +10 Days</span>
-                    <img src="plot_sp_240.png?v=1" alt="10d">
-                </div>
+            <div class="card">
+                <span class="card-label">10 Days</span>
+                <img src="plot_2t_240.png?v=1" alt="10d">
             </div>
         </div>
 
         <!-- PRECIPITATION SECTION -->
-        <div class="section-container">
-            <div class="section-header">
-                <h2 class="precip-text">Total Precipitation</h2>
-                <div class="line"></div>
+        <div class="section-title">🌧️ Total Precipitation (mm)</div>
+        <div class="grid">
+            <div class="card">
+                <span class="card-label">6 Hours</span>
+                <img src="plot_tp_6.png?v=1" alt="6h">
             </div>
-            <div class="row">
-                <div class="card precip-border">
-                    <span class="time-label">Forecast +6h</span>
-                    <img src="plot_tp_6.png?v=1" alt="6h">
-                </div>
-                <div class="card precip-border">
-                    <span class="time-label">Forecast +12h</span>
-                    <img src="plot_tp_12.png?v=1" alt="12h">
-                </div>
-                <div class="card precip-border">
-                    <span class="time-label">Forecast +5 Days</span>
-                    <img src="plot_tp_120.png?v=1" alt="5d">
-                </div>
-                <div class="card precip-border">
-                    <span class="time-label">Forecast +10 Days</span>
-                    <img src="plot_tp_240.png?v=1" alt="10d">
-                </div>
+            <div class="card">
+                <span class="card-label">12 Hours</span>
+                <img src="plot_tp_12.png?v=1" alt="12h">
+            </div>
+            <div class="card">
+                <span class="card-label">5 Days</span>
+                <img src="plot_tp_120.png?v=1" alt="5d">
+            </div>
+            <div class="card">
+                <span class="card-label">10 Days</span>
+                <img src="plot_tp_240.png?v=1" alt="10d">
             </div>
         </div>
 
-        <div class="footer">
-            WEATHER FORECASTING SYSTEM &copy; 2026 | Data ingested from ECMWF IFS Open Data Portal<br>
-            Automated Processing | Managed and updated by Unashish through Github 
-        </div>
+    </div>
+
+    <div class="footer">
+        Data source: ECMWF IFS Open Data Portal | Updated automatically via GitHub Actions managed by Unashish [RIKEN]
     </div>
 
 </body>
